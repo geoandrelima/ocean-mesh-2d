@@ -1,0 +1,114 @@
+% Test7: US coast LOW resolution 
+% Chesapeake Bay with Channels and Floodplain
+% High Resolution at Assateague and Magoty Bay
+
+clearvars; clc; close all; clear all;
+
+addpath(genpath('utilities/'))
+addpath(genpath('datasets/'))
+addpath(genpath('m_map/'))
+
+%% STEP 1: set mesh extents and set parameters for mesh.
+%Use 5 coordinates in clockwise to close the bbox and set boundaries
+
+bbox = [-100 5;-100 46.5;-50 46.5;-50 5;-100 5]; %US Coast
+%bbox = [-100 -50;5 46.5]; %US Coast
+bbox0 = [-77.63 36.52; -77.50 40; -74  40; -73.93 36.62; -77.63 36.52]; %CBay
+bbox1 = [-75.46 37.8; -75.15 38.37; -75.05 38.34; -75.33 37.82; -75.46 37.8]; %Assateague
+bbox2= [-75.98 37.05; -76.02 37.17; -75.78 37.20; -75.75 37.07; -75.98 37.05]; % Magoty
+		
+% Set variables
+
+min_el    = 1e3;                % minimum resolution in meters.
+max_el    = 1e5;                % maximum resolution in meters. 
+max_el_ns = 5e2;                % maximum resolution nearshore in meters.
+grade     = [0.25 0 -inf        % Use a spatially variable gradation rate overland. (From 6b) Or 0.1 for better res.
+             0.05 inf 0] ;
+R         = 3;                  % number of elements to resolve feature width. (Tyler was using -5)
+wl        = 30;                 % 60 elements resolve M2 wavelength.
+dt        = 2;                  % Automatically set timestep based on nearshore res (was 0 before)
+angleOfReslope = 60 ;           % Control width of channel by changing angle of reslope.
+ch = 0.1 ;                      % Scale resolution propotional to depth nearby thalweg.
+fs = 3 ;                        % Place 3 vertices per width of shoreline feature.
+
+%% STEP 2: specify geographical datasets and process the geographical data 
+%% to be used later with other OceanMesh classes...
+
+% GIS Files (use a closed line shp if you're not using a five-points bbox)
+coastline = 'datasets/GSHHS_shp/gshhs_clipline';
+dem       = 'datasets/topo15_compressed.nc';
+
+%Create a list
+gdat = [];
+%Fill the list with your areas of interest
+gdat{1}= geodata('shp',coastline,...
+                'dem',dem,...
+                'bbox',bbox,...
+                'h0',min_el);
+            
+gdat{2} = geodata('shp',coastline,...
+                'dem',dem,...
+                'bbox',bbox0,...
+                'h0',min_el);            
+            
+gdat{3} = geodata('shp',coastline,...
+                'dem',dem,...
+                'bbox',bbox1,...
+                'h0',200);
+           
+gdat{4} = geodata('shp',coastline,...
+                'dem',dem,...
+                'bbox',bbox2,...
+                'h0',200);      
+
+
+% Load the Channel thalweg data            
+load ECGC_Thalwegs.mat           
+  
+
+%Test the areas of interest
+figure;plot(gdat{4},'shp');          
+figure;plot(gdat{1},'dem');
+
+%% STEP 3: create an edge function class
+​%With channels...
+
+for i = 1:length(gdat)
+fh{i} = edgefx('geodata',gdat{i},...
+             'fs',R,...
+             'ch',0.1,...
+             'Channels',pts2,...
+             'max_el_ns',max_el_ns,...
+             'max_el',max_el,...
+             'min_el',min_el,...
+             'dt',dt,...
+             'g',grade);
+end  
+
+%No channels...
+
+for i = 1:length(gdat)
+fh{i} = edgefx('geodata',gdat{i},...
+             'fs',R,...
+             'wl',wl,...
+             'max_el',max_el,...
+             'dt',dt,...
+             'g',grade);
+end
+
+%% STEP 4: Pass your edgefx class object along with some meshing options and
+% build the mesh...
+%change itmax for tests, Default value is 100
+​
+mshopts = meshgen('ef',fh,'bou',gdat,'plot_on',1,'nscreen',2,'proj','lambert','itmax',40); 
+mshopts = mshopts.build; 
+
+%STEP4.1: Finish the mesh, update the boundary conditions and save. To
+%create foodplain go to STEP 5
+
+m = mshopts.grd ;
+m = interp(m,gdat,'mindepth',1);
+m = makens(m,'auto',gdat{1});
+write(m,'CBt21');
+
+
