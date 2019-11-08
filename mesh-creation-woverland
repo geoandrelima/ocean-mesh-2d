@@ -1,0 +1,246 @@
+% Test10 Big domain low resolution with overland areas
+%Channels + High res Assateague and Magoty
+%%
+clearvars; clc; close all; clear all;
+
+addpath(genpath('utilities/'))
+addpath(genpath('datasets/'))
+addpath(genpath('m_map/'))
+%% STEP 1: set mesh extents and set parameters for mesh.
+min_el    = 1e3;  		        % Minimum mesh resolution in meters.
+max_el    = [50e3 0 -inf        % Globally, maximum mesh resolution in meters.
+             1e4 inf 0];        % Overland, maximum mesh resolution in meters.
+         
+
+         
+grade     = 0.35;               % mesh grade in decimal percent. 
+wl        = 30;                 % 60 elements resolve M2 wavelength.
+dt        = 2;                  % Automatically set timestep based on nearshore res
+fs        = 3 ;                 % Place 3 vertices per width of shoreline feature. 
+%% STEP 2: specify geographical datasets and process the geographical data
+%% to be used later with other OceanMesh classes...
+bbox = [-100 -60;6 45.8]; %US Coast
+coastline = 'datasets/final_lines/coastline';
+demfile   = 'datasets/topo15_compressed.nc';
+
+gdatus = geodata('shp',coastline,...
+                 'dem',demfile,...
+                 'bbox',bbox,...
+                 'h0',min_el);
+             
+fhus = edgefx('geodata',gdatus,...
+             'fs',fs,...
+             'wl',wl,...
+             'max_el',max_el,...
+             'dt',dt,...
+             'g',grade);              
+
+%Test the areas of interest
+figure;plot(gdatus,'shp');          
+figure;plot(gdatus,'dem');
+%% Repeat STEPS 1-3 for a high resolution domain for High Res Chesapeake Bay
+
+min_el    = 200;  		    % minimum resolution in meters.
+max_el    = 1e3; 		    % maximum resolution in meters. 
+max_el_ns = 500;  		    % maximum resolution nearshore.
+load ECGC_Thalwegs.mat      % Load the Channel thalweg data
+angleOfReslope = 60 ;       % Control width of channel by changing angle of reslope.
+grade     = [0.25 0 -inf    % Use a spatially variable gradation rate overland.
+             0.1 inf 0] ;
+
+ch = 0.1 ;                  % Scale resolution propotional to depth nearby thalweg.
+
+%bbox2 = [-76.37 36.2; -79.5 39.9; -75.74 39.9; -74.86 39.58; -75 38.21; -76.37 36.2]; 
+bbox1 = [-76.05 36.5; -77.41 36.79; -77.85 39.44; -76.06 39.87; -74.88 39.88; -74.70 38.91; -75.01 38.23; -75.41 37.59; -75.82 36.94; -76.05 36.5]; 
+
+
+coastline = 'datasets/final_lines/coastline';
+demfile   = 'datasets/topo15_compressed.nc';
+
+%polygon boubox
+gdatcb = geodata('shp',coastline,'dem',demfile,'h0',min_el,'bbox',bbox1);
+
+fhcb = edgefx('geodata',gdatcb,...
+             'fs',fs,...
+             'ch',0.1,...
+             'Channels',pts2,...
+             'max_el_ns',max_el_ns,...
+             'wl',wl,...
+             'max_el',max_el,...
+             'dt',dt,...
+             'g',grade);                 
+  
+         
+%Test the areas of interest
+figure;plot(gdatcb,'shp');          
+figure;plot(gdatcb,'dem');
+
+%% Repeat STEPS 1-3 for a high resolution domain for High Res Assateague
+min_el    = 30;  		% minimum resolution in meters.
+max_el    = 5e2; 		% maximum resolution in meters. 
+max_el_ns = 200;  		% maximum resolution nearshore.
+
+coastline = 'datasets/final_lines/coastline';
+demfile   = 'datasets/topo15_compressed.nc';
+
+%plot(gdat,'dem');
+
+%polygon boubox
+bbox2 = [-75.46 37.8; -75.15 38.37; -75.05 38.34; -75.33 37.82; -75.46 37.8]; 
+gdat2 = geodata('shp',coastline,'dem',demfile,'h0',min_el,'bbox',bbox2);
+
+fh2 = edgefx('geodata',gdat2,'fs',fs,'wl',wl,...
+             'max_el',max_el,'max_el_ns',max_el_ns,...
+             'dt',dt,'g',grade);
+         
+%Test the areas of interest
+figure;plot(gdat2,'shp');
+figure;plot(gdat2,'dem');
+
+%% Repeat STEPS 1-3 for a high resolution domain for High Res Magoty
+min_el    = 30;  		% minimum resolution in meters.
+max_el    = 5e2; 		% maximum resolution in meters. 
+max_el_ns = 200;  		% maximum resolution nearshore.
+
+coastline = 'datasets/final_lines/coastline';
+demfile   = 'datasets/topo15_compressed.nc';
+
+%plot(gdat,'dem');
+
+%polygon boubox
+bbox3 = [-75.98 37.05; -76.02 37.17; -75.78 37.20; -75.75 37.07; -75.98 37.05]; 
+gdat3 = geodata('shp',coastline,'dem',demfile,'h0',min_el,'bbox',bbox3);
+
+fh3 = edgefx('geodata',gdat3,'fs',fs,'wl',wl,...
+             'max_el',max_el,'max_el_ns',max_el_ns,...
+             'dt',dt,'g',grade); 
+         
+%Test the areas of interest
+figure;plot(gdat3,'shp');
+figure;plot(gdat3,'dem');
+
+%% STEP 4: Pass your edgefx class object along with some meshing options and
+% build the mesh...
+mshopts = meshgen('ef',{fhus fhcb fh2 fh3},'bou',{gdatus gdatcb gdat2 gdat3},'plot_on',1,'proj','lambert','itmax',50);
+% now build the mesh with your options and the edge function.
+mshopts = mshopts.build;
+
+%STEP4.1: Finish the mesh, update the boundary conditions and save. To
+%create foodplain go to STEP 5
+
+m = mshopts.grd ;
+m = interp(m,gdatus,'mindepth',1); %interpolate the dem to the mesh. The mindepth won't let the bathymetry be less then 1
+m = makens(m,'auto',gdatus);
+
+%Ensure mesh is stable at a 2 s timestep (this function deletes the
+%boundaries)
+m = CheckTimestep(m,dt);
+
+%Recreate the boundaries
+m = makens(m,'auto',gdatus);
+
+% plot resolution
+plot(m,'resomesh',1,[],[],[10 0 1e3])
+
+%plot mesh
+plot(m,'bmesh')
+
+%Save the mesh
+write(m,'CBt41');
+
+%% STEP 5: Get fixed constraints and update gdat with overland meshing domain.
+muw = mshopts.grd ;
+muw = makens(muw,'auto',gdatus) ; % apply so that extractFixedConstraints only grabs the shoreline constraints.
+
+[pfix,egfix] = extractFixedConstraints(muw) ;
+
+%Res Variables again..
+
+min_el    = 1e3;  		        % Minimum mesh resolution in meters.
+max_el    = [50e3 0 -inf        % Globally, maximum mesh resolution in meters.
+             1e4 inf 0];        % Overland, maximum mesh resolution in meters.
+
+% 10-m contour extracted from the Coastal Relief Model.
+coastline = 'datasets/final_lines/overland';
+demfile   = 'global_dem.nc';
+
+gdat = geodata('shp',coastline,...
+               'dem',demfile,...
+               'bbox',bbox,...
+               'h0',min_el);
+
+%gdat.inpoly_flip =  mod(1,gdat.inpoly_flip) ; % if the meshing domain is inverted, you can always flip it .
+
+%% Repeat STEPS 1-3 for a high resolution domain for High Res Chesapeake
+min_el    = 200;  		    % minimum resolution in meters.
+max_el    = 1e3; 		    % maximum resolution in meters. 
+max_el_ns = 500;  		    % maximum resolution nearshore.
+
+coastline = 'datasets/final_lines/overland';
+dem       = 'datasets/CB300mgebcoWGS84.nc';
+
+%plot(gdat,'dem');
+
+%polygon boubox
+bbox1 = [-76.05 36.78; -77.41 36.79; -77.85 39.44; -76.06 39.87; -74.88 39.88; -74.70 38.91; -75.01 38.23; -75.41 37.59; -75.82 36.94; -76.05 36.78]; 
+gdat1 = geodata('shp',coastline,'dem',dem,'h0',min_el,'bbox',bbox1);
+
+%% Repeat STEPS 1-3 for a high resolution domain for High Res Assateague
+min_el    = 30;  		% minimum resolution in meters.
+max_el    = 5e2; 		% maximum resolution in meters. 
+max_el_ns = 200;  		% maximum resolution nearshore.
+
+coastline = 'datasets/final_lines/overland';
+dem       = 'datasets/CB300mgebcoWGS84.nc';
+
+%plot(gdat,'dem');
+
+%polygon boubox
+bbox2 = [-75.46 37.8; -75.15 38.37; -75.05 38.34; -75.33 37.82; -75.46 37.8]; 
+gdat2 = geodata('shp',coastline,'dem',dem,'h0',min_el,'bbox',bbox2);
+         
+%Test the areas of interest
+figure;plot(gdat2,'shp');
+         
+%% Repeat STEPS 1-3 for a high resolution domain for High Res Magoty
+min_el    = 30;  		% minimum resolution in meters.
+max_el    = 5e2; 		% maximum resolution in meters. 
+max_el_ns = 200;  		% maximum resolution nearshore.
+
+coastline = 'datasets/final_lines/overland';
+dem       = 'datasets/CB300mgebcoWGS84.nc';
+
+%plot(gdat,'dem');
+
+%polygon boubox
+bbox3 = [-75.98 37.05; -76.02 37.17; -75.78 37.20; -75.75 37.07; -75.98 37.05]; 
+gdat3 = geodata('shp',coastline,'dem',dem,'h0',min_el,'bbox',bbox3);
+         
+%Test the areas of interest
+figure;plot(gdat3,'shp');  
+%% Here we pass our constraints to the mesh generator (pfix and egfix). 
+mshopts = meshgen('ef',{fhus fhcb fh2 fh3},'bou',{gdat gdat1 gdat2 gdat3},'plot_on',1,'proj','lambert',...
+                  'pfix',pfix,'egfix',egfix,'itmax',50);
+
+% now build the mesh with your options and the edge function.
+mshopts = mshopts.build;
+
+m = mshopts.grd ;
+
+%interpolate bathy using special constraining technique for overland and
+%underwater
+%m = interpFP(m,gdat,muw,gdatuw); %send the topo data from muw to m
+
+m = interp(m,gdat,'mindepth',-10); %interpolate the dem to the mesh. The mindepth won't let the bathymetry be less then 1
+m = makens(m,'auto',gdatus);
+
+m = CheckTimestep(m,dt);
+
+m = makens(m,'auto',gdatus);
+
+% plot resolution
+plot(m,'resomesh',1,[],[],[10 0 1e3])
+%plot mesh
+plot(m,'bmesh')
+
+write(m,'CBt42');
