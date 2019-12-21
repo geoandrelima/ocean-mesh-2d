@@ -1,0 +1,197 @@
+% Test1 for Southern Brazil mesh, with overland areas
+%Macro scale with GEBCO (1.000-10.000)
+%Meso scale with xxxxx (500-2.000)
+%Micro scale with xxxxx (20-500)
+%No channels
+
+%Objectives: 1. Compare with Klein (2016) using the same parameters and SLR
+%            2. Test the ecological function of foredunes at Ingleses
+
+%%
+clearvars; clc; close all; clear all;
+
+addpath(genpath('utilities/'))
+addpath(genpath('datasets/'))
+addpath(genpath('m_map/'))
+
+%% STEP 1: set parameters for mesh.
+         
+grade     = 0.35;               % mesh grade in decimal percent. 
+wl        = 30;                 % 60 elements resolve M2 wavelength.
+dt        = 2;                  % Automatically set timestep based on nearshore res
+fs        = 3 ;                 % Place 3 vertices per width of shoreline feature. 
+
+%% STEP 2: specify geographical datasets and process the geographical data
+%% for Macro Scale
+
+min_el    = 1e3;  		        % Minimum mesh resolution in meters.
+max_el    = 10e3;               % Maximum mesh resolution in meters.
+         
+bbox = [-54 -25; -34 -21]; %BR Coast
+
+coastline = 'datasets/MESH_BUILDING/BRASIL/coastline';
+demfile   = 'datasets/MESH_BUILDING/BRASIL/CONTINENTAL/gebco_2019_brasil.nc';
+
+gdatreg = geodata('shp',coastline,...
+                 'dem',demfile,...
+                 'bbox',bbox,...
+                 'h0',min_el);
+                       
+fhreg = edgefx('geodata',gdatreg,...
+             'fs',fs,...
+             'wl',wl,...
+             'max_el',max_el,...
+             'dt',dt,...
+             'g',grade);              
+
+%Test the areas of interest
+figure;plot(gdatreg,'shp');          
+figure;plot(gdatreg,'dem');
+
+%% Repeat STEPS 1-3 for a high resolution domain for Meso Scale
+
+min_el    = 500;  		    % minimum resolution in meters.
+max_el    = 2e3; 		    % maximum resolution in meters. 
+max_el_ns = 500;  		    % maximum resolution nearshore.
+
+bbox1 = [-48.76 -27.18; -48.37 -27.19; -48.25 -27.29; -48.18 -27.46; -48.18  -27.61; -48.21 -27.76; -48.28 -27.9; -48.46 -28.02; -48.75 -28.01; -48.76 -27.18]
+
+coastline = 'datasets/MESH_BUILDING/BRASIL/coastline';
+demfile   = 'datasets/MESH_BUILDING/BRASIL/LOCAL/BATIMETRIA/Isobatas/iso30m_wgs_1.nc';
+
+%polygon boubox
+gdatloc = geodata('shp',coastline,'dem',demfile,'h0',min_el,'bbox',bbox1);
+
+fhloc = edgefx('geodata',gdatloc,...
+             'fs',fs,...
+             'max_el_ns',max_el_ns,...
+             'wl',wl,...
+             'max_el',max_el,...
+             'dt',dt,...
+             'g',grade);                 
+  
+%Test the areas of interest
+figure;plot(gdatloc,'shp');          
+figure;plot(gdatloc,'dem');
+
+%% Repeat STEPS 1-3 for a high resolution domain for Micro Scale
+
+min_el    = 20;  		    % minimum resolution in meters.
+max_el    = 500; 		    % maximum resolution in meters. 
+max_el_ns = 100;  		    % maximum resolution nearshore.
+
+bbox2 = [-48.375 -27.45; -48.391 -27.441; -48.4026 -27.4281; -48.407 -27.419; -48.404 -27.402; -48.391 -27.392; -48.37 -27.393; -48.355 -27.404; -48.348 -27.425; -48.352 -27.445; -48.361 -27.45; -48.375 -27.45]
+
+coastline = 'datasets/MESH_BUILDING/BRASIL/coastline';
+demfile   = 'datasets/MESH_BUILDING/BRASIL/MICRO/natneiwgs.nc';
+
+%polygon boubox
+gdating = geodata('shp',coastline,'dem',demfile,'h0',min_el,'bbox',bbox2);
+
+fhing = edgefx('geodata',gdating,...
+             'fs',fs,...
+             'max_el_ns',max_el_ns,...
+             'wl',wl,...
+             'max_el',max_el,...
+             'dt',dt,...
+             'g',grade);                 
+           
+%Test the areas of interest
+figure;plot(gdating,'shp');          
+figure;plot(gdating,'dem');
+
+%% STEP 4: Pass your edgefx class object along with some meshing options and
+% build the mesh...
+mshopts = meshgen('ef',{fhreg fhloc fhing},'bou',{gdatreg gdatloc gdating},'plot_on',1,'proj','lambert','itmax',60);
+% now build the mesh with your options and the edge function.
+mshopts = mshopts.build;
+
+%STEP4.1: Finish the mesh, update the boundary conditions and save. 
+
+%m = mshopts.grd ;
+%m = interp(m,gdatreg,'mindepth',1); %interpolate the dem to the mesh. The mindepth won't let the bathymetry be less then 1
+%m = interp(m,gdatloc,'mindepth',1); %interpolate the dem to the mesh. The mindepth won't let the bathymetry be less then 1
+%m = interp(m,gdating,'mindepth',1); %interpolate the dem to the mesh. The mindepth won't let the bathymetry be less then 1
+
+
+%m = makens(m,'auto',gdatreg);
+
+%Ensure mesh is stable at a 2 s timestep (this function deletes the
+%boundaries)
+%m = CheckTimestep(m,dt);
+
+%Recreate the boundaries
+%m = makens(m,'auto',gdatcb);
+
+% plot resolution
+%plot(m,'resomesh',1,[],[],[10 0 1e3])
+
+%plot mesh
+%plot(m,'bmesh')
+
+%plot boundaries
+%plot(m,'bd',0)
+
+%Save the mesh
+%write(m,'BrasilV5');
+
+%% STEP 5: Get fixed constraints and update gdat with overland meshing domain.
+muw = mshopts.grd ;
+muw = makens(muw,'auto',gdatreg) ; % apply so that extractFixedConstraints only grabs the shoreline constraints.
+
+[pfix,egfix] = extractFixedConstraints(muw) ;
+
+%Res Variables again..
+
+min_el    = 20;  		% minimum resolution in meters.
+max_el    = 5e2; 		% maximum resolution in meters. 
+max_el_ns = 100;  		% maximum resolution nearshore.
+
+% 10-m contour extracted from the Coastal Relief Model.
+coastline = 'datasets/MESH_BUILDING/BRASIL/overland';
+demfile   = 'datasets/MESH_BUILDING/BRASIL/MICRO/natneiwgs.nc';
+
+gdatov = geodata('shp',coastline,...
+               'dem',demfile,...
+               'bbox',bbox2,...
+               'h0',min_el);
+           
+           
+%Test the areas of interest
+figure;plot(gdatov,'shp');          
+figure;plot(gdatov,'dem');           
+%% Here we pass our constraints to the mesh generator (pfix and egfix). 
+mshopts = meshgen('ef',{fhreg fhloc fhing},'bou',{gdatreg gdatloc gdatov},'plot_on',1,'proj','lambert',...
+                  'pfix',pfix,'egfix',egfix,'itmax',60);
+
+% now build the mesh with your options and the edge function.
+mshopts = mshopts.build;
+
+m = mshopts.grd ;
+
+%interpolate bathy using special constraining technique for overland and
+%underwater
+%m = interpFP(m,gdat,muw,gdatuw); %send the topo data from muw to m
+
+m = interp(m,gdatreg,'mindepth',1); %interpolate the dem to the mesh. The mindepth won't let the bathymetry be less then 1
+m = interp(m,gdatloc,'mindepth',1);
+m = interp(m,gdating,'mindepth',1);
+m = interp(m,gdatov,'mindepth',-20);
+
+
+m = makens(m,'auto',gdatreg);
+
+m = CheckTimestep(m,dt);
+
+m = makens(m,'auto',gdat);
+
+% plot resolution
+plot(m,'resomesh',1,[],[],[10 0 1e3])
+
+%plot mesh
+plot(m,'bmesh')
+
+%plot boundaries
+plot(m,'bd',0)
+
+write(m,'BrasilV6');
