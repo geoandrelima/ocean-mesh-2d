@@ -1,0 +1,262 @@
+% Test2 for new iFlood mesh, with overland areas
+%Continental scale with GEBCO
+%Regional scale with CRM90 
+%ChesapeakeBay with new merge 10m (Correction with Nautical Charts on Potomac and CoNED on Delaware connections)
+%With channels!
+
+%%
+clearvars; clc; close all; clear all;
+
+addpath(genpath('utilities/'))
+addpath(genpath('datasets/'))
+addpath(genpath('m_map/'))
+
+%% STEP 1: set parameters for mesh.
+         
+%grade     = 0.35;               % mesh grade in decimal percent.
+%grade             = [0.3 1000 -inf    % Use a spatially variable gradation rate overland.
+ %                        0.2 inf 1000] ; 
+ 
+wl        = 60;                 % 60 elements resolve M2 wavelength.
+dt        = 2;                  % Automatically set timestep based on nearshore res
+fs        = 3 ;                 % Place 3 vertices per width of shoreline feature. 
+
+
+%% STEP 2: specify geographical datasets and process the geographical data
+%% for the first boundarybox
+
+min_el    = 7e3;  		        % Minimum mesh resolution in meters. (was 5e3)
+max_el    = 50e3                % Maximum mesh resolution in meters. (was 50e3)
+         
+bbox = [-100 -60.5;8 45.6]; %US Coast
+
+coastlineus = 'datasets/final_lines/coastline2_pol';
+demus   = 'datasets/MESH_BUILDING/CONTINENTAL/continental_gebco_2019.nc';
+
+gdatus = geodata('shp',coastlineus,...
+                 'dem',demus,...
+                 'bbox',bbox,...
+                 'h0',min_el);        
+             
+fhus = edgefx('geodata',gdatus,...
+             'fs',fs,...
+             'wl',wl,...
+             'max_el',max_el,...
+             'dt',dt,...
+             'g',grade);              
+
+%Test the areas of interest
+figure;plot(gdatus,'shp');          
+figure;plot(gdatus,'dem');
+
+%% Repeat STEPS 1-3 for a high resolution domain for Regional Scale
+
+min_el    = 1500;  		    % minimum resolution in meters. (was 1e3)
+max_el    = 7e3; 		    % maximum resolution in meters. (was 5e3)
+max_el_ns = 1500;  		    % maximum resolution nearshore. (was 1e3)
+
+%bbox1 = [-80.05 31.68; -81.74 31.81; -81.43 32.74; -79.62 33.94; -78.06 34.8; -77.32 35.66; -76.29 36.84; -74.37 39.9; -73.72 37.71; -74.1 35.66; -75.26 35.08; -78.59 32.53; -80.05 31.68]; 
+%bbox1 = [-81.2572324477 31.1115228844; -80.8574829988 31.2828440769; -80.4291800177 31.5398258655; -79.7581720141 31.8253611862; -79.1442710746 32.3536015295; -78.5303701351 32.7247974464; -77.702317705 33.0959933633; -76.9599258712 33.6099569406; -76.1175966752 34.209581114; -75.5322492677 34.7663749894; -74.9183483282 35.2803385667; -74.6042594754 35.5658738874; -74.2187867925 36.0798374646; -73.9046979397 36.6651848721; -73.6619929171 37.450407004; -73.4906717247 37.9215402831; -73.4050111285 38.6496553509; -73.5192252568 39.2492795244; -73.7190999813 39.7775198677; -74.3901079849 39.8631804639; -74.832687732 39.6490289734; -77.7737015352 37.6645584945; -80.5005638479 34.9234194158; -81.5855980666 32.2536641672;-81.2572324477 31.1115228844]
+bbox1 = [-75.8393447444 34.6560569187; -76.4580046059 34.5965703935; -77.1242536875 34.7726505079; -77.7667081591 35.8576847266; -77.8166768402 36.8689556541; -77.709601095 38.3894312368; -77.2765391919 39.1223052266; -76.6007722663 39.6267509598; -75.8298269004 39.9979468767; -75.2206848829 40.0074647208; -74.5925071773 39.7314472441; -74.2117934164 39.303144263; -73.8881867196 38.6559308695; -73.8691510316 37.7517356872; -74.1166149762 36.7999512849; -74.6210607094 35.7910598184; -75.3063454791 35.0201144525;-75.8393447444 34.6560569187]
+
+coastlinereg = 'datasets/final_lines/coastline2_pol';
+demreg   = 'datasets/MESH_BUILDING/REGIONAL/regional_crm.nc';
+
+%polygon boubox
+gdatreg = geodata('shp',coastlinereg,'dem',demreg,'h0',min_el,'bbox',bbox1);
+
+fhreg = edgefx('geodata',gdatreg,...
+             'fs',fs,...
+             'max_el_ns',max_el_ns,...
+             'wl',wl,...
+             'max_el',max_el,...
+             'dt',dt,...
+             'g',grade);                 
+        
+%Test the areas of interest
+figure;plot(gdatreg,'shp');          
+figure;plot(gdatreg,'dem');
+
+%% Repeat STEPS 1-3 for a high resolution domain for High Res Chesapeake Bay
+
+min_el    = 80;  		    % minimum resolution in meters. (was 40)
+min_el_ch = 200;            % to bound the minimum resolution in channel (was 100)
+max_el    = 750; 		    % maximum resolution in meters. (was 500)
+
+%Variables for Channels
+ 
+max_el_ns = 200;  		            % maximum resolution nearshore. (was 100)
+load ECGC_Thalwegs.mat              % Load the Channel thalweg data
+angleOfReslope    = 60 ;            % Control width of channel by changing angle of reslope.
+grade             = [0.25 0 -inf    % Use a spatially variable gradation rate overland.
+                         0.1 inf 0] ;             
+ch = 0.1 ;                          % Scale resolution propotional to depth nearby thalweg.
+
+%bbox2 = [-75.54 36.82; -76.73 36.81; -77.39 37.27; -77.43 37.81; -77.25 37.97; -77.33 38.2; -77.49 38.26; -77.48 38.43; -77.27 38.69; -77.17 38.82; -77.12 38.95; -76.93 39; -76.8 38.94; -76.75 39.1; -76.64 39.32; -76.51 39.38; -75.69 39.72; -75.74 39.57; -75.75 39.4; -75.69 39.27; -75.6 39.05; -75.55 38.85; -75.35 38.68; -74.83 38.63; -74.81 38.33; -75.01 37.92; -75.43 37.52; -75.54 36.82];
+%bbox2 = [-75.9329667313 36.8010329671; -76.0549141078 36.7998432365; -76.2601426196 36.7998432365; -76.4802427626 36.7998432365; -76.6795226219 36.7909202578; -76.750906452 36.8474324567; -76.750906452 36.966405507; -76.7628037571 37.0199433796; -76.8163416297 37.0496866422; -76.8877254599 37.1121474936; -77.0215701415 37.1508137349; -77.155414823 37.18650565; -77.2386959582 37.2103002601; -77.3427973772 37.198402955; -77.4231041862 37.2103002601; -77.4409501437 37.290607069; -77.4528474488 37.4095801193; -77.4528474488 37.5136815383; -77.4379758175 37.5969626735; -77.4379758175 37.6802438087; -77.4231041862 37.7694735964; -77.3814636186 37.8230114691; -77.3071054622 37.8765493417; -77.2654648946 37.9300872143; -77.259516242 37.9984967182; -77.2833108521 38.099623811; -77.3190027672 38.1501873574; -77.3606433348 38.1829049462; -77.4052582286 38.1977765775; -77.4587961013 38.2245455138; -77.5182826264 38.2632117551; -77.5182826264 38.3554158691; -77.4944880164 38.4297740255; -77.455821775 38.4892605507; -77.4082325549 38.5606443809; -77.351720356 38.6379768636; -77.2952081571 38.6855660837; -77.2505932633 38.7212579988; -77.1970553906 38.7896675027; -77.155414823 38.8491540278; -77.1464918443 38.932435163; -77.1107999292 38.9592040993; -77.0453647515 38.9889473619; -76.9650579426 39.0038189932; -76.8817768074 38.9681270781; -76.8133673034 38.9294608368; -76.7747010621 38.9562297731; -76.7568551046 39.0454595608; -76.7479321258 39.1703812636; -76.715214537 39.2536623988; -76.6497793593 39.313148924; -76.5099860252 39.3904814066; -76.3761413436 39.4499679318; -76.2363480095 39.5183774357; -76.1411695693 39.5838126134; -76.0549141078 39.6224788547; -75.9597356676 39.6314018335; -75.8556342486 39.6432991385; -75.7158409145 39.6849397061; -75.6563543894 39.6670937486; -75.6444570843 39.5600180033; -75.6444570843 39.5064801307; -75.6147138218 39.417250343; -75.5522529704 39.336943534; -75.4630231826 39.1941758737; -75.4207877498 39.0240444117; -75.2518460184 38.8170313042; -75.0442380456 38.6653406651; -75.0246074923 38.4375072738; -75.0686275209 38.2893858262; -75.1774878619 38.0645267611; -75.3267990401 37.8581085189; -75.4065109837 37.80159632; -75.4927664452 37.7605506177; -75.5445197221 37.6844078655; -75.5576067576 37.6183778226; -75.5677194669 37.5571067017; -75.6307751835 37.4440823039; -75.6771746732 37.3709138779; -75.7378509288 37.285848147; -75.7753274397 37.1942388983; -75.7396355246 37.0568250252; -75.8377882911 36.9259546699;-75.9329667313 36.8010329671]
+%bbox2 = [-75.9329667313 36.8010329671; -76.0549141078 36.7998432365; -76.2601426196 36.7998432365; -76.4802427626 36.7998432365; -76.6795226219 36.7909202578; -76.750906452 36.8474324567; -76.750906452 36.966405507; -76.7628037571 37.0199433796; -76.8163416297 37.0496866422; -76.8877254599 37.1121474936; -77.0215701415 37.1508137349; -77.155414823 37.18650565; -77.2386959582 37.2103002601; -77.3427973772 37.198402955; -77.4231041862 37.2103002601; -77.4409501437 37.290607069; -77.4528474488 37.4095801193; -77.4528474488 37.5136815383; -77.4379758175 37.5969626735; -77.4379758175 37.6802438087; -77.4231041862 37.7694735964; -77.3814636186 37.8230114691; -77.3071054622 37.8765493417; -77.2654648946 37.9300872143; -77.259516242 37.9984967182; -77.2833108521 38.099623811; -77.3190027672 38.1501873574; -77.3606433348 38.1829049462; -77.4052582286 38.1977765775; -77.4587961013 38.2245455138; -77.5182826264 38.2632117551; -77.5182826264 38.3554158691; -77.4944880164 38.4297740255; -77.455821775 38.4892605507; -77.4082325549 38.5606443809; -77.351720356 38.6379768636; -77.2952081571 38.6855660837; -77.2505932633 38.7212579988; -77.1970553906 38.7896675027; -77.155414823 38.8491540278; -77.1650516401 38.9474257674; -77.1307874016 38.9799054101; -77.0453647515 38.9889473619; -76.9650579426 39.0038189932; -76.8817768074 38.9681270781; -76.8133673034 38.9294608368; -76.7747010621 38.9562297731; -76.7568551046 39.0454595608; -76.7479321258 39.1703812636; -76.715214537 39.2536623988; -76.6497793593 39.313148924; -76.5099860252 39.3904814066; -76.3761413436 39.4499679318; -76.2363480095 39.5183774357; -76.1411695693 39.5838126134; -76.0549141078 39.6224788547; -75.9597356676 39.6314018335; -75.8556342486 39.6432991385; -75.7158409145 39.6849397061; -75.6563543894 39.6670937486; -75.6444570843 39.5600180033; -75.6444570843 39.5064801307; -75.6147138218 39.417250343; -75.5522529704 39.336943534; -75.4630231826 39.1941758737; -75.4207877498 39.0240444117; -75.2518460184 38.8170313042; -75.0442380456 38.6653406651; -75.0246074923 38.4375072738; -75.0686275209 38.2893858262; -75.1774878619 38.0645267611; -75.3267990401 37.8581085189; -75.4065109837 37.80159632; -75.4927664452 37.7605506177; -75.5445197221 37.6844078655; -75.5576067576 37.6183778226; -75.5677194669 37.5571067017; -75.6307751835 37.4440823039; -75.6771746732 37.3709138779; -75.7378509288 37.285848147; -75.7753274397 37.1942388983; -75.7396355246 37.0568250252; -75.8377882911 36.9259546699;-75.9329667313 36.8010329671]
+bbox2 = [-75.9329667313 36.8010329671; -76.0549141078 36.7998432365; -76.2544319132 36.7827111173; -76.4809566009 36.7827111173; -76.6795226219 36.7909202578; -76.750906452 36.8474324567; -76.750906452 36.966405507; -76.7628037571 37.0199433796; -76.8163416297 37.0496866422; -76.8877254599 37.1121474936; -77.0215701415 37.1508137349; -77.155414823 37.18650565; -77.2386959582 37.2103002601; -77.3727785859 37.1570003335; -77.458082263 37.1895989493; -77.4616514545 37.2656227284; -77.4528474488 37.4095801193; -77.4721210829 37.5208199213; -77.4504679878 37.6001749459; -77.4379758175 37.6802438087; -77.4231041862 37.7694735964; -77.3814636186 37.8230114691; -77.3071054622 37.8765493417; -77.2654648946 37.9300872143; -77.259516242 37.9984967182; -77.2833108521 38.099623811; -77.3190027672 38.1501873574; -77.3606433348 38.1829049462; -77.4052582286 38.1977765775; -77.4587961013 38.2245455138; -77.5182826264 38.2632117551; -77.5182826264 38.3554158691; -77.4944880164 38.4297740255; -77.455821775 38.4892605507; -77.4082325549 38.5606443809; -77.351720356 38.6379768636; -77.2952081571 38.6855660837; -77.2505932633 38.7212579988; -77.1970553906 38.7896675027; -77.155414823 38.8491540278; -77.1650516401 38.9474257674; -77.1307874016 38.9799054101; -77.0453647515 38.9889473619; -76.9650579426 39.0038189932; -76.8817768074 38.9681270781; -76.8133673034 38.9294608368; -76.7747010621 38.9562297731; -76.7568551046 39.0454595608; -76.7479321258 39.1703812636; -76.715214537 39.2536623988; -76.6554900657 39.3188596304; -76.5099860252 39.3904814066; -76.3761413436 39.4499679318; -76.2363480095 39.5183774357; -76.1491407637 39.6448457882; -76.0587212454 39.6424663272; -75.934751327 39.6314018335; -75.811733193 39.6457975726; -75.5968678642 39.6096297653; -75.5535616739 39.5700117395; -75.5629605449 39.5259917109; -75.6492754929 39.5151056768; -75.7298797344 39.4810198979; -75.7473687728 39.395954167; -75.7085835584 39.3036310799; -75.6044821394 39.0487908062; -75.5021653162 38.8427294831; -75.0442380456 38.6653406651; -75.0246074923 38.4375072738; -75.0686275209 38.2893858262; -75.1774878619 38.0645267611; -75.3267990401 37.8581085189; -75.4065109837 37.80159632; -75.4927664452 37.7605506177; -75.5445197221 37.6844078655; -75.5576067576 37.6183778226; -75.5677194669 37.5571067017; -75.6307751835 37.4440823039; -75.6771746732 37.3709138779; -75.7378509288 37.285848147; -75.7753274397 37.1942388983; -75.7396355246 37.0568250252; -75.8377882911 36.9259546699;-75.9329667313 36.8010329671]
+
+coastlinecb = 'datasets/final_lines/coastline2_pol';
+demfilecb   = 'datasets/MESH_BUILDING/CHESAPEAKE_BAY/after_delaware.nc';
+
+%polygon boubox
+gdatcb = geodata('shp',coastlinecb,...
+                 'dem',demfilecb,...
+                 'h0',min_el,...
+                 'bbox',bbox2);
+
+%fhcb = edgefx('geodata',gdatcb,...
+%             'fs',fs,...
+%             'max_el_ns',max_el_ns,...
+%             'wl',wl,...
+%             'max_el',max_el,...
+%             'dt',dt,...
+%             'g',grade); 
+         
+fhcb = edgefx('geodata',gdatcb,...
+             'fs',fs,...
+             'ch',0.1,...
+             'Channels',pts2,...
+             'max_el_ns',max_el_ns,...
+             'wl',wl,...
+             'max_el',max_el,...
+             'dt',dt,...
+             'g',grade);              
+        
+%Test the areas of interest
+figure;plot(gdatcb,'shp');          
+figure;plot(gdatcb,'dem');
+
+%% STEP 4: Pass your edgefx class object along with some meshing options and
+% build the mesh...
+mshopts = meshgen('ef',{fhus fhreg fhcb},'bou',{gdatus gdatreg gdatcb},'plot_on',1,'proj','lambert','itmax',20);
+
+% now build the mesh with your options and the edge function.
+mshopts = mshopts.build;
+
+
+%% verify the mesh them go to the step 5
+mcheck = mshopts.grd ;
+mcheck = interp(mcheck,gdatus,'mindepth',10);
+%
+mcheck = interp(mcheck,gdatus,'type','depth','ignoreOL',1) % interpolates bathyonly
+idx_nans=find(isnan(mcheck.b)); % find the NANs or the topography nodes
+mcheck = interp(mcheck,gdatus,'type','depth','K',idx_nans) % interpolates the topography
+%
+plot(mcheck,'bmesh')
+plot(mcheck,'tri')
+mcheck = makens(mcheck,'islands',gdatus);
+write(mcheck,'iFloodcheck');
+
+%% STEP4.1: Finish the mesh, update the boundary conditions and save. To
+%create overland Areas go to Step 5
+
+%m = mshopts.grd ;
+%m = interp(m,gdatus,'mindepth',1); %interpolate the dem to the mesh. The mindepth won't let the bathymetry be less then 1
+%m = interp(m,gdatreg,'mindepth',1); %interpolate the dem to the mesh. The mindepth won't let the bathymetry be less then 1
+%m = interp(m,gdatcb,'mindepth',1); %interpolate the dem to the mesh. The mindepth won't let the bathymetry be less then 1
+
+%m = makens(m,'auto',gdatus);
+
+%Ensure mesh is stable at a 2 s timestep (this function deletes the
+%boundaries)
+%m = CheckTimestep(m,dt);
+
+%Recreate the boundaries
+%m = makens(m,'auto',gdatcb);
+
+% plot resolution
+%plot(m,'resomesh',1,[],[],[10 0 1e3])
+
+%plot mesh
+%plot(m,'bmesh')
+
+%plot boundaries
+%plot(m,'bd',0)
+
+%Save the mesh
+%write(m,'iFloodV6');
+
+%% STEP 5: Get fixed constraints and update gdat with overland meshing domain.
+muw = mshopts.grd ;
+muw = makens(muw,'auto',gdatus) ; % apply so that extractFixedConstraints only grabs the shoreline constraints.
+
+[pfix,egfix] = extractFixedConstraints(muw) ;
+
+%Res Variables again..
+
+min_el    = 200;  		        % Minimum mesh resolution in meters. (was 100)
+max_el    = [50e3 0 -inf        % Globally, maximum mesh resolution in meters.
+             500 inf 0];        % Overland, maximum mesh resolution in meters.
+
+% New coastline based on aprox. 10m elevation contour.
+
+coastlineov = 'datasets/final_lines/overland2_pol';
+demfileov   = 'datasets/MESH_BUILDING/CHESAPEAKE_BAY/after_delaware.nc';
+
+gdatov = geodata('shp',coastlineov,...
+               'dem',demfileov,...
+               'bbox',bbox2,...
+               'h0',min_el);
+           
+%Test the areas of interest
+figure;plot(gdatov,'shp');          
+figure;plot(gdatov,'dem');           
+           
+%% Here we pass our constraints to the mesh generator (pfix and egfix). 
+mshopts_ov = meshgen('ef',{fhus fhreg fhcb},'bou',{gdatus gdatreg gdatov},'plot_on',1,'proj','lambert',...
+                  'pfix',pfix,'egfix',egfix,'itmax',60);
+
+% now build the mesh with your options and the edge function.
+mshopts_ov = mshopts_ov.build;
+
+mov = mshopts_ov.grd ;
+
+%Plot the mesh with no z values
+plot(mov,'tri')
+
+%Interpolate GEBCO (gdatus) 
+%m1 = interp(mov,gdatus,'mindepth',1); %interpolate the dem to the mesh. The mindepth won't let the bathymetry be less then 1
+
+m1 = interp(mov,gdatus,'type','depth','ignoreOL',1) % interpolates bathyonly
+idx_nans=find(isnan(m1.b)); % find the NANs or the topography nodes
+m1 = interp(m1,gdatus,'type','depth','K',idx_nans) % interpolates the topography
+
+%Interpolate Coastal Relief (gdatreg)
+m2 = interp(m1,gdatreg,'mindepth',1); %interpolate the dem to the mesh. The mindepth won't let the bathymetry be less then 1
+
+%Interpolate Cbay Bathymetry
+m3 = interp(m2,gdatcb,'mindepth',1); %interpolate the dem to the mesh. The mindepth won't let the bathymetry be less then 1
+
+%Interpolate Topography
+m4 = interp(m3,gdatov,'mindepth',-136); % The mindepth won't let the bathymetry be less then -136 (the highest elevation at the domain)
+
+idx_nans(50389)=1;
+
+%Set the last interpolation as a new variable
+m5 = m4;
+
+%plot mesh
+%plot(m1,'bmesh')
+
+%interpolate bathy using special constraining technique for overland and
+%underwater
+%m = interpFP(m,gdatov,muw,gdatcb);
+% m = makens(m,'auto',gdatus);
+m6 = CheckTimestep(m5,dt);   % Its deleting the ocean boundary
+% m = makens(m,'auto',gdatus);
+
+m6 = makens(m6,'islands',gdatus);
+
+% plot resolution
+%plot(m5,'resomesh',1,[],[],[10 0 1e3])
+
+%plot mesh
+%plot(m5,'bmesh')
+
+%plot boundaries
+%plot(m5,'bd',0)
+
+write(m6,'Ifloodv7l');
+           
