@@ -7,6 +7,13 @@
 %Objectives: 1. Compare with Klein (2016) using the same parameters and SLR
 %            2. Test the ecological function of foredunes at Ingleses
 
+%RUN0 - Tides to compare with epagri and LOC
+%RUN1 - Syntetic Storm with dunes
+%RUN2 - Syntetic Storm with no dunes
+%RUN3 - SLR to compare with Klein (2016)
+
+
+
 %%
 clearvars; clc; close all; clear all;
 
@@ -17,28 +24,62 @@ addpath(genpath('m_map/'))
 %% STEP 1: set parameters for mesh.
          
 grade     = 0.35;               % mesh grade in decimal percent. 
-wl        = 30;                 % 60 elements resolve M2 wavelength.
+wl        = 60;                 % 60 elements resolve M2 wavelength.
 dt        = 2;                  % Automatically set timestep based on nearshore res
 fs        = 3 ;                 % Place 3 vertices per width of shoreline feature. 
 
 %% STEP 2: specify geographical datasets and process the geographical data
 %% for Macro Scale
 
-min_el    = 1e3;  		        % Minimum mesh resolution in meters.
-max_el    = 10e3;               % Maximum mesh resolution in meters.
+min_el    = 5e3;  		        % Minimum mesh resolution in meters.
+max_el    = 50e3;               % Maximum mesh resolution in meters.
          
-bbox = [-54 -25; -34 -21]; %BR Coast
+% bbox = [-54 -25; -34 -21]; %BR Coast
+% bboxr = [-39.9846147883 -7.1540260707; -35.5592246632 -5.73660334285; -33.7965413006 -7.32763963642; -31.7754743182 -9.65246012683; -29.633959413 -12.2698672332; -27.8493636586 -15.839058742; -26.1837409545 -19.0513310999; -25.588875703 -23.0964148098; -24.9940104516 -27.0225254694; -24.9940104516 -29.9968517267; -25.4699026528 -33.4470701851; -26.3027140048 -36.4213964424; -27.4924445077 -39.8716149009; -28.8011480609 -42.6079950576; -30.466770765 -45.225402164; -32.6082856702 -47.8428092704; -34.8687736258 -50.1032972259; -37.4861807322 -52.2448121312; -40.3415339392 -54.0294078856; -43.9107254479 -55.5760575394; -47.8368361076 -57.0037341428; -52.3578120186 -57.8365454949; -55.8080304771 -57.8365454949; -59.020302835 -57.479626344; -62.4705212934 -56.7657880423; -66.0329705278 -55.4021630455; -71.7835687319 -52.1143210288; -70.1348472542 -43.447454697; -57.9172972228 -16.620970234;-39.9846147883 -7.1540260707]
+% bboxg = [-72.1312026913 7.14381833474; -65.9142136249 13.1387720774; -61.605361 15.840833; -56.9217830109 17.3574432296; -51.8149705635 18.5786375105; -45.3759461733 18.6896551724; -40.1581160639 17.8015138772; -35.9394449117 16.3582842725; -31.7207737595 14.0269133726; -28.3902439024 11.8065601346; -25.6148023549 8.92010092515; -22.9503784693 5.92262405383; -20.8410428932 3.03616484441; -19.5088309504 0.0386879730866; -18.2876366695 -3.51387720774; -17.5105130362 -7.51051303616; -17.0664423886 -11.1740958789; -17.1774600505 -15.2817493692; -17.73254836 -19.3894028595; -18.842724979 -22.7199327166; -20.8410428932 -26.716568545; -22.9503784693 -30.3801513877; -25.503784693 -33.2666105971; -28.1682085786 -35.8200168209; -31.0546677881 -38.2624053827; -33.9411269975 -39.8166526493; -37.9377628259 -41.3708999159; -43.2666105971 -42.9251471825; -47.929352397 -43.2582001682; -52.370058873 -42.8141295206; -58.1429772918 -41.4819175778; -64.5820016821 -38.5954583684;-72.1312026913 7.14381833474]
+% bboxy = [-63.8551890742 -34.3226130549; -59.3818023833 -24.9951259121; -49.9591368002 -14.0496052853; -39.1087946136 -6.1497947459; -32.1607684766 -7.8630066701; -27.4018464649 -10.9087167576; -23.9754226165 -14.6206759267; -20.7393556486 -19.8554901395; -18.8357868439 -25.0903043523; -17.9791808818 -30.7058323261; -18.0743593221 -36.0358249791; -19.1213221646 -40.889925431; -20.8345340888 -44.9825983611; -22.6429244532 -48.4090222094; -25.40309922 -52.1209813785; -28.4488093075 -54.7859777051; -33.3029097594 -57.3557955914; -37.3955826894 -58.4979368742; -42.0593262608 -58.7834721949; -47.2941404737 -57.7365093523; -50.9109212025 -56.3088327488; -54.8132372521 -53.6438364223; -58.5251964212 -49.455985052; -61.2853711879 -45.4584905622;-63.8551890742 -34.3226130549]
+bboxb = [-42.5095927266 -4.96208457856; -38.607276677 -5.34279833949; -35.0856743884 -6.19940430159; -32.3029130024 -7.00443186455; -29.706800246 -8.12432364184; -26.9070708027 -9.70235296439; -24.4636705614 -11.433094802; -22.4275036936 -13.2147408113; -20.4422409975 -15.2000035074; -18.5078824731 -17.4906912337; -16.9807573222 -19.8322831317; -15.7590572015 -21.9193541712; -14.6270433767 -24.379244892; -13.6276697543 -27.0918304386; -12.9138314525 -30.089951306; -12.5569123017 -32.4456177018; -12.4141446413 -34.8012840975; -12.4141446413 -37.5852534744; -12.6282961318 -40.3692228512; -13.1279829431 -42.724889247; -13.8418212448 -45.3660909634; -14.6984272069 -47.7931411894; -15.7691846595 -50.0060399248; -16.6971744518 -51.7906356792; -18.0534672251 -53.8607667542; -19.2669923381 -55.4312110181; -21.1229719227 -57.429958263; -23.1931029977 -59.3573216777; -25.6201532237 -61.2846850924; -28.2613549402 -63.0692808468; -31.045324317 -64.2828059598; -33.7579098636 -65.3535634124; -36.6132630706 -66.2101693745; -39.9683030888 -66.7812400159; -43.1091916165 -66.9953915064; -46.0359286537 -66.9240076762; -49.4623525021 -66.424320865; -53.4598469919 -65.4249472426; -56.8148870101 -63.9972706391; -59.3847048964 -62.6409778658; -61.9545227827 -60.9991497717; -64.2388053483 -59.071786357; -66.5230879139 -56.8588876216; -71.2344207054 -49.9346560946; -63.2394317259 -25.4500023446; -52.5318571996 -13.7430541959;-42.5095927266 -4.96208457856]
 
-coastline = 'datasets/MESH_BUILDING/BRASIL/coastline';
+coastline = 'datasets/MESH_BUILDING/BRASIL/FINAL_LINES/GSHHS_f_L1_v3';
+demfile   = 'datasets/global_dem.nc';
+
+gdatcon = geodata('shp',coastline,...
+                 'dem',demfile,...
+                 'bbox',bboxb,...
+                 'h0',min_el);
+                       
+fhcon = edgefx('geodata',gdatcon,...
+             'fs',fs,...
+             'wl',wl,...
+             'max_el',max_el,...
+             'dt',dt,...
+             'g',grade);              
+
+%Test the areas of interest
+figure;plot(gdatcon,'shp');          
+figure;plot(gdatcon,'dem');
+
+%% STEP 2: specify geographical datasets and process the geographical data
+%% for Macro Scale
+
+min_el    = 5e2;  		        % Minimum mesh resolution in meters.
+max_el    = 25e3;               % Maximum mesh resolution in meters.
+max_el_ns = 2500;  		        % maximum resolution nearshore.
+
+         
+bboxbl = [-48.6378727113 -21.705330886; -43.9265399198 -19.0998210846; -39.8933535149 -17.600760651; -38.7869041472 -18.6715181036; -37.8589143549 -19.8136593864; -37.073692223 -21.0628764145; -36.3241620062 -22.8117802537; -35.8958590251 -24.6320679232; -35.7887832798 -26.595123253; -36.0029347704 -28.0941836867; -36.3598539212 -29.4861683751; -36.8238488174 -30.7353854032; -37.4306113739 -31.8061428558; -38.1801415907 -32.8769003084; -39.108131383 -33.8762739308; -39.9647373451 -34.6971879779; -41.0711867128 -35.4467181947; -42.3204037409 -36.1248645814; -43.5339288538 -36.5888594775; -44.8902216272 -36.9100867133; -46.5320497212 -37.0885462887; -48.0668020699 -36.9457786284; -49.2803271829 -36.7673190529; -50.6723118713 -36.3033241568; -51.9215288994 -35.7322535154; -53.0279782671 -35.0541071287; -54.205811465 -34.0547335063; -54.1344276348 -30.271390507; -51.2790744278 -24.9176032439;-48.6378727113 -21.705330886]
+
+coastline = 'datasets/MESH_BUILDING/BRASIL/FINAL_LINES/GSHHS_f_L1_v3';
 demfile   = 'datasets/MESH_BUILDING/BRASIL/CONTINENTAL/gebco_2019_brasil.nc';
 
 gdatreg = geodata('shp',coastline,...
                  'dem',demfile,...
-                 'bbox',bbox,...
+                 'bbox',bboxbl,...
                  'h0',min_el);
                        
 fhreg = edgefx('geodata',gdatreg,...
              'fs',fs,...
+             'max_el_ns',max_el_ns,...
              'wl',wl,...
              'max_el',max_el,...
              'dt',dt,...
@@ -50,14 +91,19 @@ figure;plot(gdatreg,'dem');
 
 %% Repeat STEPS 1-3 for a high resolution domain for Meso Scale
 
-min_el    = 500;  		    % minimum resolution in meters.
-max_el    = 2e3; 		    % maximum resolution in meters. 
-max_el_ns = 500;  		    % maximum resolution nearshore.
+min_el    = 100;  		    % minimum resolution in meters.
+max_el    = 1e3; 		    % maximum resolution in meters. 
+max_el_ns = 200;  		    % maximum resolution nearshore.
+
+% max_el    = [5e2 0 -inf     % Globally, maximum mesh resolution in meters.
+%              1e2 inf 0];    % Overland, maximum mesh resolution in meters.
+% grade     = [0.25 0 -inf    % Use a spatially variable gradation rate overland.
+%              0.05 inf 0] ;
 
 bbox1 = [-48.76 -27.18; -48.37 -27.19; -48.25 -27.29; -48.18 -27.46; -48.18  -27.61; -48.21 -27.76; -48.28 -27.9; -48.46 -28.02; -48.75 -28.01; -48.76 -27.18]
 
-coastline = 'datasets/MESH_BUILDING/BRASIL/coastline';
-demfile   = 'datasets/MESH_BUILDING/BRASIL/LOCAL/BATIMETRIA/Isobatas/iso30m_wgs_1.nc';
+coastline = 'datasets/MESH_BUILDING/BRASIL/FINAL_LINES/GSHHS_f_L1_v3';
+demfile   = 'datasets/MESH_BUILDING/BRASIL/LOCAL/BATIMETRIA/mer_LC_SMC_30m.nc';
 
 %polygon boubox
 gdatloc = geodata('shp',coastline,'dem',demfile,'h0',min_el,'bbox',bbox1);
@@ -77,12 +123,12 @@ figure;plot(gdatloc,'dem');
 %% Repeat STEPS 1-3 for a high resolution domain for Micro Scale
 
 min_el    = 20;  		    % minimum resolution in meters.
-max_el    = 500; 		    % maximum resolution in meters. 
+max_el    = 100; 		    % maximum resolution in meters. 
 max_el_ns = 100;  		    % maximum resolution nearshore.
 
 bbox2 = [-48.375 -27.45; -48.391 -27.441; -48.4026 -27.4281; -48.407 -27.419; -48.404 -27.402; -48.391 -27.392; -48.37 -27.393; -48.355 -27.404; -48.348 -27.425; -48.352 -27.445; -48.361 -27.45; -48.375 -27.45]
 
-coastline = 'datasets/MESH_BUILDING/BRASIL/coastline';
+coastline = 'datasets/MESH_BUILDING/BRASIL/FINAL_LINES/GSHHS_f_L1_v3';
 demfile   = 'datasets/MESH_BUILDING/BRASIL/MICRO/natneiwgs.nc';
 
 %polygon boubox
@@ -102,96 +148,143 @@ figure;plot(gdating,'dem');
 
 %% STEP 4: Pass your edgefx class object along with some meshing options and
 % build the mesh...
-mshopts = meshgen('ef',{fhreg fhloc fhing},'bou',{gdatreg gdatloc gdating},'plot_on',1,'proj','lambert','itmax',60);
+% mshopts = meshgen('ef',{fhreg fhloc},'bou',{gdatreg gdatloc},'plot_on',1,'proj','lambert','itmax',30);
+mshopts = meshgen('ef',{fhcon fhreg fhloc fhing},'bou',{gdatcon gdatreg gdatloc gdating},'plot_on',1,'proj','lambert','itmax',60);
 % now build the mesh with your options and the edge function.
 mshopts = mshopts.build;
 
 %STEP4.1: Finish the mesh, update the boundary conditions and save. 
 
-%m = mshopts.grd ;
-%m = interp(m,gdatreg,'mindepth',1); %interpolate the dem to the mesh. The mindepth won't let the bathymetry be less then 1
-%m = interp(m,gdatloc,'mindepth',1); %interpolate the dem to the mesh. The mindepth won't let the bathymetry be less then 1
-%m = interp(m,gdating,'mindepth',1); %interpolate the dem to the mesh. The mindepth won't let the bathymetry be less then 1
+m1 = mshopts.grd ;
 
+plot(m1,'tri')
 
-%m = makens(m,'auto',gdatreg);
+% m2 = interp(m1,gdatcon,'mindepth',1); %interpolate the dem to the mesh. The mindepth won't let the bathymetry be less then 1
+% m3 = interp(m2,gdatreg,'mindepth',1); %interpolate the dem to the mesh. The mindepth won't let the bathymetry be less then 1
+% m4 = interp(m3,gdatloc,'mindepth',1); %interpolate the dem to the mesh. The mindepth won't let the bathymetry be less then 1
+% m5 = interp(m4,gdating,'mindepth',1); %interpolate the dem to the mesh. The mindepth won't let the bathymetry be less then 1
 
+% m3 = interp(m1,gdatloc,'type','depth','ignoreOL',1) % interpolates bathyonly
+% idx_nans=find(isnan(m3.b)); % find the NANs or the topography nodes
+% m4 = interp(m3,gdatloc,'type','depth','K',idx_nans) % interpolates the topography
+%m4 = makens(m3,'islands',gdatreg);
 %Ensure mesh is stable at a 2 s timestep (this function deletes the
 %boundaries)
 %m = CheckTimestep(m,dt);
-
 %Recreate the boundaries
-%m = makens(m,'auto',gdatcb);
+
+% m4 = makens(m3,'islands',gdatreg);
 
 % plot resolution
 %plot(m,'resomesh',1,[],[],[10 0 1e3])
 
 %plot mesh
-%plot(m,'bmesh')
+% plot(m4,'bmesh')
 
 %plot boundaries
 %plot(m,'bd',0)
 
 %Save the mesh
-%write(m,'BrasilV5');
+% write(m1,'BrasilV15');
 
 %% STEP 5: Get fixed constraints and update gdat with overland meshing domain.
 muw = mshopts.grd ;
-muw = makens(muw,'auto',gdatreg) ; % apply so that extractFixedConstraints only grabs the shoreline constraints.
+muw = makens(muw,'auto',gdatcon) ; % apply so that extractFixedConstraints only grabs the shoreline constraints.
 
 [pfix,egfix] = extractFixedConstraints(muw) ;
 
 %Res Variables again..
 
-min_el    = 20;  		% minimum resolution in meters.
-max_el    = 5e2; 		% maximum resolution in meters. 
-max_el_ns = 100;  		% maximum resolution nearshore.
+min_el    = 20;  		    % minimum resolution in meters.
+max_el    = 100; 		    % maximum resolution in meters. 
+max_el_ns = 100;  		    % maximum resolution nearshore.
+
+grade     = [0.25 0 -inf    % Use a spatially variable gradation rate overland.
+              0.05 inf 0] ;
 
 % 10-m contour extracted from the Coastal Relief Model.
-coastline = 'datasets/MESH_BUILDING/BRASIL/overland';
+coastline = 'datasets/MESH_BUILDING/BRASIL/FINAL_LINES/GSHHS_f_L1_v3_OL';
 demfile   = 'datasets/MESH_BUILDING/BRASIL/MICRO/natneiwgs.nc';
 
 gdatov = geodata('shp',coastline,...
                'dem',demfile,...
                'bbox',bbox2,...
                'h0',min_el);
-           
-           
+                      
 %Test the areas of interest
 figure;plot(gdatov,'shp');          
 figure;plot(gdatov,'dem');           
 %% Here we pass our constraints to the mesh generator (pfix and egfix). 
-mshopts = meshgen('ef',{fhreg fhloc fhing},'bou',{gdatreg gdatloc gdatov},'plot_on',1,'proj','lambert',...
+mshopts = meshgen('ef',{fhcon fhreg fhloc fhing},'bou',{gdatcon gdatreg gdatloc gdatov},'plot_on',1,'proj','lambert',...
                   'pfix',pfix,'egfix',egfix,'itmax',60);
 
 % now build the mesh with your options and the edge function.
 mshopts = mshopts.build;
 
-m = mshopts.grd ;
+m2 = mshopts.grd ;
 
 %interpolate bathy using special constraining technique for overland and
 %underwater
 %m = interpFP(m,gdat,muw,gdatuw); %send the topo data from muw to m
 
-m = interp(m,gdatreg,'mindepth',1); %interpolate the dem to the mesh. The mindepth won't let the bathymetry be less then 1
-m = interp(m,gdatloc,'mindepth',1);
-m = interp(m,gdating,'mindepth',1);
-m = interp(m,gdatov,'mindepth',-20);
+m3 = interp(m2,gdatcon,'mindepth',1); %interpolate the dem to the mesh. The mindepth won't let the bathymetry be less then 1
+m3b = interp(m3,gdatreg,'mindepth',1); %interpolate the dem to the mesh. The mindepth won't let the bathymetry be less then 1
+m4 = interp(m3b,gdatloc,'mindepth',1);
+m5 = interp(m4,gdating,'mindepth',1);
+m6 = interp(m5,gdatov,'mindepth',-20);
 
+%Check time step
 
-m = makens(m,'auto',gdatreg);
+m7 = CheckTimestep(m6,dt);
 
-m = CheckTimestep(m,dt);
+%Do the boundaries
+m8 = makens(m7,'islands',gdatcon);
 
-m = makens(m,'auto',gdat);
+%This next step creates the boundaries separately, however you have to
+%delete the first one manually (the islands one that covers the entire domain) 
+
+m9 = makens(m8,'outer',0); % make the outer boundary,select (2)
+m10 = makens(m9,'outer',1); % use the same numbers from above to make ocean (flux and islands)
+
+plot(m10,'bd',0) %plot final boundaries
 
 % plot resolution
-plot(m,'resomesh',1,[],[],[10 0 1e3])
+plot(m10,'resomesh',1,[],[],[10 0 1e3])
 
 %plot mesh
-plot(m,'bmesh')
 
-%plot boundaries
-plot(m,'bd',0)
+plot(m10,'bmesh',1,'Hammer-Aitoff')
 
-write(m,'BrasilV6');
+write(m10,'BrasilV19');
+
+
+
+
+%% Once the Fort.14 is edited and go to go, load it back here 
+
+meshfile = 'E:\MODEL_TESTS\OCEANMESH2D\OceanMesh2D\datasets\fort14\Brasil\BrasilV19_edit'
+m_pre = msh(meshfile);
+
+%------ create fort 13 attributes-------------
+
+% nlcd_file = 'Y:\Geospatial_Data_Repository\Landcover\Chesapeake_Bay\NLCD\NLCD2016_CBAY\nlcd_2016_CB2.nc';
+
+m_f13 = Calc_tau0(m_pre);
+
+write(m_f13,'BrasilV19_edit','13');
+
+%create fort13 attributes [Advection State]
+
+pgon = shaperead('E:\MODEL_TESTS\OCEANMESH2D\OceanMesh2D\datasets\fort14\Brasil\Tests\BrasilV19_t2\poly_advection')
+s_test{1,length(pgon.X)} = 0;
+pgon2 = table2array(table(reshape(pgon.X,[length(pgon.X),1]),reshape(pgon.Y,[length(pgon.Y),1])));
+l2 = length(pgon2)-1;pgon2 = pgon2(1:l2,1:2);
+
+% 25 means that in the polygon, nodes with bathy value less than 25 will
+% not use advection
+
+m_f13 = Calc_f13_inpoly(m_f13,'Adv',{pgon2},[25],0) %,cfvals,inverse,Cf_val_on_mesh
+
+write(m_f13,'BrasilV19_edit','13');
+
+
