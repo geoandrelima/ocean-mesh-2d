@@ -1,0 +1,52 @@
+%% Create fort.15 (help Make_f15)
+
+m = msh('E:/MODEL_TESTS/MagotyEasternShore/test6_joaquim/fort','14')
+%m = m.grd ;
+
+m13 = msh('E:/MODEL_TESTS/MagotyEasternShore/test6_joaquim/fort','13')
+m.f13=m13.f13
+
+ts1='26-Sep-2015 18:00' %(change dates)
+te1='15-Oct-2015 00:00' %(change dates)
+
+dt1=2 %timestep
+
+tidal_tpxo_file = 'datasets/Constituents/tpxo9_netcdf/h_tpxo9.v1.nc'
+C = "major8"%{'M2', 'S2', 'N2', 'K2', 'K1', 'O1', 'P1', 'Q1','MM', 'MF', 'M4', 'MN4', 'MS4', '2N2', 'S1'};
+
+%{'M2', 'S2', 'N2', 'K2', 'K1', 'O1', 'P1', 'Q1'};%
+% fort15_magoty.f15.oute = [5 0.0 15 1800];
+
+fort15_magoty = Make_f15( m, ts1, te1, dt1, 'const', C ,'tidal_database', tidal_tpxo_file, 'sta_database',{'CO-OPS',[1 2 3]});
+
+% this if for the meteorological stuff
+
+fort15_magoty.f15.nws=308; % wind type + 300 if swan
+fort15_magoty.f15.wtimnc=[2015 09 26 18 1 0.8 3600]; % wind params (change storm dates) (if 308, change to 0.8, if 319 change to 0.9+add 1 after 0.9)
+fort15_magoty.f15.outm = [5 0.0 18 1800]; % station metro (18=runday and 1800 if dt=2)
+fort15_magoty.f15.outgm = [5 0.0 18 1800]; % global metro (18=runday and 1800 if dt=2)
+fort15_magoty.f15.nfreq = 0; % global metro
+fort15_magoty.f15.harfreq = 0; % global metro
+
+% this if for the elevation stuff
+
+fort15_magoty.f15.nramp = 1; % ramp type (1 activate de ramp days to jump and warm up the tides)
+fort15_magoty.f15.dramp = 3; % ramp period
+
+fort15_magoty.f15.oute = [5 0.0 18 1800]; % station elevation (18=runday and 1800 if dt=2)
+fort15_magoty.f15.outge = [5 0.0 18 1800]; % global elevation (18=runday and 1800 if dt=2)
+
+fort15_magoty.f15.ntip=1; % SAL + normal tidal potential [2]
+
+fort15_magoty.f15.outhar = [0 0 0 0]; % THAS, THAF, NHAINC, FMV (this is for frequency analysis, leave it default)
+fort15_magoty.f15.outhar_flag = [0 0 0 0] ; % NHASE, NHASV, NHAGE, NHAGV (this is for frequency analysis, leave it default)
+
+% %--- CHANGING GWCE conditions
+
+fort15_magoty.f15.im = 111112; %0%111112 % 511112 [william was using this] Look for IM on adcircwiki 11111 means Barotropic 2DDI and 2 means next field
+fort15_magoty.f15.taucf = [0.0025  1. 10. 0.33333];%[ 0.0 2.0 10 1.33333 ]%[0.0025  1. 10. 0.33333] % 0.0025[william was using this]
+%m2_wf15.f15.a00b00c00 = [0.35 0.30 0.35]%[0.0025  1. 10. 0.33333] % 0.0025[william was using this]
+fort15_magoty.f15.elsm = 4;%50.0 % -0.05 [william was using this]
+fort15_magoty.f15.cori = 0.000100 % 0.00000 [william was using this]
+
+write(fort15_magoty,'fort_','15');
